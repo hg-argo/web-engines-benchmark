@@ -28,16 +28,16 @@ on:
 jobs:
   build:
     name: Build (${{matrix.targetPlatform}})
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          - targetPlatform: StandaloneWindows64
-            buildName: PC
-          - targetPlatform: StandaloneOSX
-            buildName: Mac
+          # - targetPlatform: StandaloneWindows64
+          #   buildName: PC
+          # - targetPlatform: StandaloneOSX
+          #   buildName: Mac
           - targetPlatform: WebGL
             buildName: Web
 
