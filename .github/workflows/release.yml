@@ -1,0 +1,115 @@
+# Since this workflow uses `@game-ci/unity` Action to generate Unity builds,
+# you must setup some secret variables before running this workflow:
+# - `UNITY_LICENSE`:
+#   - If using a personal license
+#     - Log in Unity Hub with the account used for CI
+#     - Create the license, and locate the file on your machine:
+#       - Windows: C:\ProgramData\Unity\Unity_lic.ulf
+#       - Mac: /Library/Application Support/Unity/Unity_lic.ulf
+#       - Linux: ~/.local/share/unity3d/Unity/Unity_lic.ulf
+#     - Copy the content into a secret variable `UNITY_LICENSE`
+#   - If using a professional license
+#     - Go to subscriptons page (https://id.unity.com/subscriptions)
+#     - Copy the "Serial Number" of the license into a secret variable `UNITY_LICENSE`
+# - `UNITY_EMAIL`: The email used for the CI account
+# - `UNITY_PASSWORD`: The password used for the CI account
+#
+# More info: https://game.ci/docs/github/getting-started/
+
+name: Build & Release
+
+on:
+  push:
+    branches:
+      - master
+      # @todo Remove ci branch
+      - ci
+
+jobs:
+  build:
+    name: Build (${{matrix.targetPlatform}})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - targetPlatform: StandaloneWindows64
+            buildName: PC
+          - targetPlatform: StandaloneOSX
+            buildName: Mac
+          - targetPlatform: WebGL
+            buildName: Web_NoCompression
+            webglCompression: Disabled
+          - targetPlatform: WebGL
+            buildName: Web_Brotli
+            webglCompression: Brotli
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Note that this option doesn't cause any issue if the repository doesn't use LFS at all
+          lfs: true
+      
+      # Note that caching Unity Library folder can reduce build time by 50-70%
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ matrix.targetPlatform }}
+          restore-keys: |
+            Library-
+
+      - name: Build Unity project
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          targetPlatform: ${{ matrix.targetPlatform }}
+          buildName: ${{ matrix.buildName }}
+          buildsPath: Builds
+          webglCompressionFormat: ${{ matrix.webglCompression }}
+          unityVersion: 6000.3.2f1
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.buildName }}
+          path: build/${{ matrix.buildName }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: Builds
+
+      - name: Zip Builds
+        run: |
+          cd Builds
+          for d in */ ; do
+            zip -r "${d%/}.zip" "$d"
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Build v1.0.${{ github.run_number }}
+          body: |
+            Automated Unity builds for:
+            - Windows (PC)
+            - macOS
+            - WebGL (No Compression)
+            - WebGL (Brotli Compression)
+          files: builds/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
