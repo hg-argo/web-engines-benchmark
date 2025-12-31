@@ -158,3 +158,11 @@ The files to use to the projects are stored in the [`Resources/`](./Rsources) fo
 - [Google Fonts](https://fonts.google.com) for font [*Jersey 15*](https://fonts.google.com/specimen/Jersey+15)
 - [Pixabay](https://pixabay.com)
 - [Sketchup Textures Club](https://www.sketchuptextureclub.com/textures) for environment textures
+
+## Reference project docs
+
+This repository includes a workflow for releasing PC and MacOS builds automatically. We encountered a *no disk space* issue while running a job to build the Web version though, which requires to use Cloud or Self-Hosted runners.
+
+As an alternative for the Web export, we chose to include the [Web build output in the repository](./Builds/PenaltyDemo_WebGL_Brotli) directly. And instead of making it part of the releases, we deploy it to GitHub Pages, making the content available.
+
+In order to make the Web export using Brotli compression, we had to enable an option in Unity: `Player Settings > WebGL > Publishing Settings > Decompression Fallback`. This adds a loader script to the build able to decompress Brotli build client-side, since GitHub Pages doesn't support `Content-Encoding: br` headers. Enabling this causes a heavy overhead (30+ Mo) to the output, but can be avoided if the website that hosts the build can be configured to support the custom header.

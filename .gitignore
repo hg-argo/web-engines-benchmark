@@ -6,8 +6,7 @@
 /[Ll]ibrary/
 /[Tt]emp/
 /[Oo]bj/
-/[Bb]uild/
-/[Bb]uilds/
+/[Bb]uilds/*
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
 *.log
@@ -97,3 +96,7 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# Build output for web export, see README file for more info
+!/[Bb]uilds/PenaltyDemo_WebGL_Brotli
+!/[Bb]uilds/PenaltyDemo_WebGL_Brotli/**
