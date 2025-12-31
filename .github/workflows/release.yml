@@ -1,0 +1,113 @@
+# /!\ This workflow fine, but GitHub fails to generate the WebGL output because of a lack of disk space.
+# This seems to be a common issue for Android builds too.
+# It can be solved by using Cloud or Self-Hosted runners, instead of default GitHub-Hosted ones.
+
+# Since this workflow uses `@game-ci/unity` Action to generate Unity builds,
+# you must setup some secret variables before running this workflow:
+# - `UNITY_LICENSE` (if using a personal license):
+#   - Log in Unity Hub with the account used for CI
+#   - Create the license, and locate the file on your machine:
+#     - Windows: C:\ProgramData\Unity\Unity_lic.ulf
+#     - Mac: /Library/Application Support/Unity/Unity_lic.ulf
+#     - Linux: ~/.local/share/unity3d/Unity/Unity_lic.ulf
+#   - Copy the content into a secret variable `UNITY_LICENSE`
+# - `UNITY_SERIAL` (if using a professional license)
+#   - Go to subscriptons page (https://id.unity.com/subscriptions)
+#   - Copy the "Serial Number" of the license into a secret variable `UNITY_SERIAL`
+#   - Replace all occurrences of `UNITY_LICENSE` by `UNITY_SERIAL` in this workflow script
+# - `UNITY_EMAIL`: The email used for the CI account
+# - `UNITY_PASSWORD`: The password used for the CI account
+#
+# More info: https://game.ci/docs/github/getting-started/
+
+name: Build & Release
+
+on:
+  push:
+    branches:
+      - master
+      - main
+      - release
+
+jobs:
+  build:
+    name: Build (${{matrix.targetPlatform}})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - targetPlatform: StandaloneWindows64
+            buildName: PC
+          - targetPlatform: StandaloneOSX
+            buildName: Mac
+          # Not working on GitHub-Hosted runners (cf. notes above)
+          # - targetPlatform: WebGL
+          #   buildName: Web
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Note that this option doesn't cause any issue if the repository doesn't use LFS at all
+          lfs: true
+      
+      # Note that caching Unity Library folder can reduce build time by 50-70%
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-
+
+      - name: Build Unity project
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: .
+          targetPlatform: ${{ matrix.targetPlatform }}
+          buildName: ${{ matrix.buildName }}
+          buildsPath: Builds
+          unityVersion: 6000.3.2f1
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.buildName }}
+          path: build/${{ matrix.buildName }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: Builds
+
+      - name: Zip Builds
+        run: |
+          cd Builds
+          for d in */ ; do
+            zip -r "${d%/}.zip" "$d"
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.0.${{ github.run_number }}
+          name: Build v0.0.${{ github.run_number }}
+          body: |
+            Automated Unity builds for:
+            - Windows (PC)
+            - macOS
+            - WebGL (No Compression)
+          files: builds/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
