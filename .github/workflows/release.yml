@@ -28,7 +28,7 @@ on:
 jobs:
   build:
     name: Build (${{matrix.targetPlatform}})
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     strategy:
       fail-fast: false
