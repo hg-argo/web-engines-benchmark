@@ -1,3 +1,7 @@
+# /!\ This workflow fine, but GitHub fails to generate the WebGL output because of a lack of disk space.
+# This seems to be a common issue for Android builds too.
+# It can be solved by using Cloud or Self-Hosted runners, instead of default GitHub-Hosted ones.
+
 # Since this workflow uses `@game-ci/unity` Action to generate Unity builds,
 # you must setup some secret variables before running this workflow:
 # - `UNITY_LICENSE` (if using a personal license):
@@ -21,9 +25,7 @@ name: Build & Release
 on:
   push:
     branches:
-      # @todo Use master branch when workflow is ready
-      # - master
-      - ci
+      - master
 
 jobs:
   build:
@@ -31,15 +33,16 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
-          # - targetPlatform: StandaloneWindows64
-          #   buildName: PC
-          # - targetPlatform: StandaloneOSX
-          #   buildName: Mac
-          - targetPlatform: WebGL
-            buildName: Web
+          - targetPlatform: StandaloneWindows64
+            buildName: PC
+          - targetPlatform: StandaloneOSX
+            buildName: Mac
+          # Not working on GitHub-Hosted runners (cf. notes above)
+          # - targetPlatform: WebGL
+          #   buildName: Web
 
     steps:
       - name: Checkout repository
@@ -96,8 +99,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: Build v1.0.${{ github.run_number }}
+          tag_name: v0.0.${{ github.run_number }}
+          name: Build v0.0.${{ github.run_number }}
           body: |
             Automated Unity builds for:
             - Windows (PC)
