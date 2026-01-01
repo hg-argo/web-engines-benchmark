@@ -12,7 +12,8 @@ on:
       - release
       - pages
     paths:
-      - "Builds/PenaltyDemo_WebGL_Brotli"
+      - ".github/workflows/deploy.yml"
+      - "Builds/PenaltyDemo_WebGL_Brotli/**"
 
 permissions:
   contents: read
