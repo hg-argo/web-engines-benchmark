@@ -7,10 +7,10 @@ name: Deploy WebGL to GitHub Pages
 on:
   push:
     branches:
-      - pages
-      - main
       - master
+      - main
       - release
+      - pages
     paths:
       - "Builds/PenaltyDemo_WebGL_Brotli"
 
